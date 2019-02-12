@@ -1,0 +1,2 @@
+Dependencies for Project 'assignment5', Target 'Target 1': (DO NOT MODIFY !)
+F (.\power.s)(0x5AC599F3)(--cpu ARM7TDMI --bi --pd "__EVAL SETA 1" -g --apcs=interwork -I D:\programs\Keil\ARM\RV31\INC-I D:\programs\Keil\ARM\CMSIS\Include--list .\power.lst --xref -o .\power.o --depend .\power.d)

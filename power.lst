@@ -1,0 +1,452 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000                 AREA             power, CODE, READONLY
+    2 00000000         
+    3 00000000 00000002 
+                       X       EQU              2           ;defines X value in
+                                                             X^N. i.e. the base
+                                                            
+    4 00000000 00000009 
+                       N       EQU              9           ;defines N value in
+                                                             X^N. i.e. the expo
+                                                            nent
+    5 00000000 00000004 
+                       SINGLE  EQU              4           ;defines SINGLE, wh
+                                                            ich represents the 
+                                                            space needed to sto
+                                                            re a single element
+                                                             in the stack
+    6 00000000 0000001C 
+                       NEXT    EQU              0x1C        ;defines NEXT, whic
+                                                            h represents the am
+                                                            ount of bytes betwe
+                                                            en start of current
+                                                             frame and the stor
+                                                            ed result in the ne
+                                                            xt frame
+    7 00000000         
+    8 00000000         
+    9 00000000                 ENTRY                        ;beginning of progr
+                                                            am
+   10 00000000         ;main program prepares X and N values and passes them to
+                        function. Then loads value from stack and stores it int
+                       o result
+   11 00000000 E28FDF55 
+                       MAIN    ADR              sp, stack   ;puts starting posi
+                                                            tioning of stack in
+                                                            to sp to define the
+                                                             stack
+   12 00000004         
+   13 00000004 E3A01002        MOV              r1, #X      ;prepares exponent 
+                                                            parameter
+   14 00000008 E3A02009        MOV              r2, #N      ;prepares base
+   15 0000000C         
+   16 0000000C E92D0007        STMFD            sp!, {r0,r1,r2} ;pushes X and N
+                                                             onto the stack and
+                                                             makes room for r0 
+                                                            which will be a wor
+                                                            king register
+   17 00000010 E24DD004        SUB              sp,#SINGLE  ;make room in stack
+                                                             to keep track of r
+                                                            0 value, so we can 
+                                                            restore it in the e
+                                                            nd so function does
+                                                            nt modify any regis
+                                                            ters
+   18 00000014         
+   19 00000014 EB000002        BL               POWER       ;call power functio
+                                                            n to compute X^N
+   20 00000018         
+   21 00000018 E59D0004        LDR              r0,[sp,#SINGLE] ;loads result f
+                                                            rom the stack into 
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+                                                            a register so it ca
+                                                            n be stored in "res
+                                                            ult"
+   22 0000001C E58F0070        STR              r0,result   ;stores X^N into re
+                                                            sult
+   23 00000020         
+   24 00000020         
+   25 00000020 EAFFFFFE 
+                       ENDLOOP B                ENDLOOP     ;end of prog
+   26 00000024         
+   27 00000024         
+   28 00000024         ;-------------------------------------------------------
+                       --------------------------------------------------------
+                       -
+   29 00000024         
+   30 00000024                 AREA             power, CODE, READONLY
+   31 00000024         ;POWER function computes X^N
+   32 00000024 E92D4807 
+                       POWER   STMFD            sp!,{r0,r1,r2,fp,lr} ;stacks 3 
+                                                            general registers a
+                                                            s well as fp and lr
+                                                             onto stack.
+   33 00000028         
+   34 00000028 E52D0004        STR              r0,[sp,#-SINGLE]! ;reserve spac
+                                                            e for initial r0 va
+                                                            lue, so we can rest
+                                                            ore it before retur
+                                                            ning each call. to 
+                                                            meet requirement th
+                                                            at function cannot 
+                                                            modify any register
+                                                            s
+   35 0000002C E1A0B00D        MOV              fp,sp       ;set frame pointer 
+                                                            for this call
+   36 00000030         
+   37 00000030         
+   38 00000030 E59B200C        LDR              r2,[fp,#0x0C] ;Loads exponent v
+                                                            alue from stack int
+                                                            o r2, so we can use
+                                                             it to compute X^N
+   39 00000034         
+   40 00000034         
+   41 00000034 E3520000        CMP              r2, #0      ;     ;if (n==0) 
+   42 00000038         
+   43 00000038 03A02001 
+                       ZERO    MOVEQ            r2,#1       ;store 1 in registe
+                                                            r we it can be retu
+                                                            rned to stack
+   44 0000003C 058B201C        STREQ            r2,[fp,#NEXT] ;return 1
+   45 00000040 0A000011        BEQ              END_FR      ;     ;end this cal
+                                                            l
+   46 00000044         
+   47 00000044         
+   48 00000044 159B1008        LDRNE            r1,[fp,#0x08] ;load base value 
+                                                            from stack
+   49 00000048         
+   50 00000048 E3120001        TST              r2, #0x01   ;    ;if (n & 1), a
+                                                            ka if n is odd
+   51 0000004C 1A000007        BNE              ODD         ;compute X^N when N
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+                                                             is odd
+   52 00000050         
+   53 00000050         ;EVEN computes (X^(N/2))^2 if N is even
+   54 00000050 01A020C2 
+                       EVEN    MOVEQ            r2, r2, ASR #1 ;else, aka if n 
+                                                            is even, divide n b
+                                                            y 2 then return (X^
+                                                            N/2)^2
+   55 00000054         
+   56 00000054 EBFFFFF2        BL               POWER       ;restart call to fi
+                                                            nd what values of X
+                                                            ^N/2 is, until we g
+                                                            et a non-variable a
+                                                            nswer
+   57 00000058         
+   58 00000058         ;
+   59 00000058         
+   60 00000058 E59B0004        LDR              r0,[fp,#SINGLE] ;loads current 
+                                                            result (y value)
+   61 0000005C E1A02000        MOV              r2, r0      ;duplicates current
+                                                             result
+   62 00000060 E0000092        MUL              r0, r2, r0  ;y*y
+   63 00000064 E58B001C        STR              r0,[fp,#NEXT] ;stores y*y in th
+                                                            e stack and the nex
+                                                            t calls result valu
+                                                            e.
+   64 00000068 E59B0000        LDR              r0,[fp]     ;restores r0 regist
+                                                            er to value before 
+                                                            the call so functio
+                                                            n doesn't modify it
+                                                            .
+   65 0000006C         
+   66 0000006C EA000006        B                END_FR      ;collapse current f
+                                                            rame and go to next
+                                                             call
+   67 00000070         
+   68 00000070         
+   69 00000070         ;ODD computes (X^(N-1))*X if N is odd
+   70 00000070 E2422001 
+                       ODD     SUB              r2,r2,#1    ;if N is odd, we de
+                                                            crement it by one
+   71 00000074         
+   72 00000074 EBFFFFEA        BL               POWER       ;compute X^N-1
+   73 00000078         
+   74 00000078 E59B0004        LDR              r0,[fp,#SINGLE] ;loads current 
+                                                            result value, aka X
+                                                            ^N-1
+   75 0000007C E0000091        MUL              r0, r1, r0  ;    ;multiples X^N
+                                                            -1 by X
+   76 00000080 E58B001C        STR              r0,[fp,#NEXT] ;stores X^N-1 * X
+                                                             into stack
+   77 00000084 E59B0000        LDR              r0,[fp]     ;restores r0 regist
+                                                            er to value before 
+                                                            call
+   78 00000088         
+   79 00000088         
+   80 00000088 EAFFFFFF        B                END_FR      ;collapse current f
+                                                            rame and go to next
+                                                             call
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+   81 0000008C         
+   82 0000008C         
+   83 0000008C         ;END_FR collapses current frame and moves on to the next
+                        call
+   84 0000008C E28BD008 
+                       END_FR  ADD              sp,fp,#0x08 ;pops current resul
+                                                            t and restore value
+                                                             of r0 so they dont
+                                                             overwrite other th
+                                                            ings
+   85 00000090 E8BD8806        LDMFD            sp!,{r1,r2,fp,pc} ;pops 4 stack
+                                                             elements to get th
+                                                            e base value, expon
+                                                            ent value, frame po
+                                                            inter, and where to
+                                                             go next
+   86 00000094         
+   87 00000094         
+   88 00000094         ;-------------------------------------------------------
+                       --------------------------------------------------------
+                       -
+   89 00000094         
+   90 00000094                 AREA             power, DATA, READWRITE
+   91 00000094         
+   92 00000094 00000000 
+                       result  DCD              0x00        ;final answer. resu
+                                                            lt = X^N.
+   93 00000098 00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00 00 00 
+              00               SPACE            0xC4        ;Allocate space for
+                                                             contents of stack
+   94 0000015C 00000000 
+                       stack   DCD              0x00        ;Starting position 
+                                                            of stack.
+   95 00000160         
+   96 00000160                 END
+Command Line: --debug --xref --bi --apcs=interwork --depend=.\power.d -o.\power
+.o -ID:\programs\Keil\ARM\RV31\INC -ID:\programs\Keil\ARM\CMSIS\Include --prede
+fine="__EVAL SETA 1" --list=.\power.lst power.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+ENDLOOP 00000020
+
+Symbol: ENDLOOP
+   Definitions
+      At line 25 in file power.s
+   Uses
+      At line 25 in file power.s
+Comment: ENDLOOP used once
+END_FR 0000008C
+
+Symbol: END_FR
+   Definitions
+      At line 84 in file power.s
+   Uses
+      At line 45 in file power.s
+      At line 66 in file power.s
+      At line 80 in file power.s
+
+EVEN 00000050
+
+Symbol: EVEN
+   Definitions
+      At line 54 in file power.s
+   Uses
+      None
+Comment: EVEN unused
+MAIN 00000000
+
+Symbol: MAIN
+   Definitions
+      At line 11 in file power.s
+   Uses
+      None
+Comment: MAIN unused
+ODD 00000070
+
+Symbol: ODD
+   Definitions
+      At line 70 in file power.s
+   Uses
+      At line 51 in file power.s
+Comment: ODD used once
+POWER 00000024
+
+Symbol: POWER
+   Definitions
+      At line 32 in file power.s
+   Uses
+      At line 19 in file power.s
+      At line 56 in file power.s
+      At line 72 in file power.s
+
+ZERO 00000038
+
+Symbol: ZERO
+   Definitions
+      At line 43 in file power.s
+   Uses
+      None
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+Comment: ZERO unused
+power 00000000
+
+Symbol: power
+   Definitions
+      At line 1 in file power.s
+   Uses
+      None
+Comment: power unused
+result 00000094
+
+Symbol: result
+   Definitions
+      At line 92 in file power.s
+   Uses
+      At line 22 in file power.s
+Comment: result used once
+stack 0000015C
+
+Symbol: stack
+   Definitions
+      At line 94 in file power.s
+   Uses
+      At line 11 in file power.s
+Comment: stack used once
+10 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+N 00000009
+
+Symbol: N
+   Definitions
+      At line 4 in file power.s
+   Uses
+      At line 14 in file power.s
+Comment: N used once
+NEXT 0000001C
+
+Symbol: NEXT
+   Definitions
+      At line 6 in file power.s
+   Uses
+      At line 44 in file power.s
+      At line 63 in file power.s
+      At line 76 in file power.s
+
+SINGLE 00000004
+
+Symbol: SINGLE
+   Definitions
+      At line 5 in file power.s
+   Uses
+      At line 17 in file power.s
+      At line 21 in file power.s
+      At line 34 in file power.s
+      At line 60 in file power.s
+      At line 74 in file power.s
+
+X 00000002
+
+Symbol: X
+   Definitions
+      At line 3 in file power.s
+   Uses
+      At line 13 in file power.s
+Comment: X used once
+4 symbols
+345 symbols in table
